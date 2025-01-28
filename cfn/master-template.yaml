@@ -144,7 +144,7 @@ Resources:
         AppImageTag: "2.0.1"
         EvaluationImageTag: "2.0.1"
         RuntimeImageTag: "2.0.1"
-        AiImageTag: "2.0.1"
+        CostComputeImageTag: "2.0.1"
 
   ECSStack:
     Type: AWS::CloudFormation::Stack
