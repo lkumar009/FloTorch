@@ -1,7 +1,37 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Master template for FloTorch deployment
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Prerequisites Check"
+        Parameters:
+          - PrerequisitesMet
+      - Label:
+          default: "Configuration Parameters"
+        Parameters:
+          - ProjectName
+          - TableSuffix
+          - ClientName
+          - CreatedBy
+          - OpenSearchAdminUser
+          - OpenSearchAdminPassword
+          - NginxAuthPassword
+    ParameterLabels:
+      PrerequisitesMet:
+        default: " I confirm that I have completed all prerequisites"
+
 Parameters:
+  PrerequisitesMet:
+    Type: String
+    AllowedPattern: "^(yes|no)$"
+    AllowedValues: 
+      - "yes"
+      - "no"
+    Description: "REQUIRED: You must complete all prerequisites given here https://github.com/2.0.3/FissionAI/FloTorch/blob/main/install.md before proceeding"
+    ConstraintDescription: "You must select either 'yes' or 'no'. The field cannot be empty."
+
   ProjectName:
     Type: String
     Default: flotorch
@@ -9,7 +39,7 @@ Parameters:
     
   TableSuffix:
     Type: String
-    Description: "A unique suffix to append to resource names in this Environment. This ensures uniqueness across deployments."
+    Description: "A unique suffix to append to resource names in this Environment. Must contain only lowercase letters, exactly 6 characters long."
     AllowedPattern: "^[a-z]+$"
     ConstraintDescription: "Must contain only lowercase letters, exactly 6 characters long."
     MaxLength: 6
@@ -18,7 +48,7 @@ Parameters:
   ClientName:
     Type: String
     Default: "flotorch"
-    Description: "Client Name (must be lowercase). Used for tagging and naming resources specific to a client."
+    Description: "Client Name (must be lowercase, can include numbers and hyphens, between 3 and 20 characters.). Used for tagging and naming resources specific to a client."
     ConstraintDescription: "Must be lowercase, can include numbers and hyphens, between 3 and 20 characters."
     AllowedPattern: "^[a-z0-9-]+$"
     MaxLength: 20
@@ -37,26 +67,31 @@ Parameters:
 
   OpenSearchAdminPassword:
     Type: String
-    Default: "Flotorch@123"
     NoEcho: true
-    Description: "Password for the OpenSearch admin account. Must be strong and secure as it provides full access to the OpenSearch cluster."
-    MinLength: 8
+    Description: "Password for the OpenSearch admin account(Must be between 12 and 41 characters, containing at least one uppercase letter, one lowercase letter, one number, and one special character). Must be strong and secure as it provides full access to the OpenSearch cluster."
+    MinLength: 12
     MaxLength: 41
-    ConstraintDescription: "Must be between 8 and 41 characters containing letters, numbers and symbols."
+    AllowedPattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{12,41}$"
+    ConstraintDescription: "Must be between 12 and 41 characters, containing at least one uppercase letter, one lowercase letter, one number, and one special character."
 
   NginxAuthPassword:
     Type: String
     NoEcho: true
-    Description: "Password for NGINX basic authentication. This secures access to the application's web interface."
-    MinLength: 8
+    Description: "Password for NGINX basic authentication(Must be between 12 and 41 characters, containing at least one uppercase letter, one lowercase letter, one number, and one special character). This secures access to the application's web interface."
+    MinLength: 12
     MaxLength: 41
-    ConstraintDescription: "Must be between 8 and 41 characters containing letters, numbers and symbols."
+    AllowedPattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{12,41}$"
+    ConstraintDescription: "Must be between 12 and 41 characters, containing at least one uppercase letter, one lowercase letter, one number, and one special character."
+
+Conditions:
+  PrerequisitesMet: !Equals [!Ref PrerequisitesMet, "yes"]
 
 Resources:
   VPCStack:
     Type: AWS::CloudFormation::Stack
+    Condition: PrerequisitesMet
     Properties:
-      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/templates/vpc-template.yaml
+      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/2.0.3/templates/vpc-template.yaml
       Parameters:
         ProjectName: !Ref ProjectName
         ClientName: !Ref ClientName
@@ -67,7 +102,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: [VPCStack]
     Properties:
-      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/templates/ecr-repository-template.yaml
+      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/2.0.3/templates/ecr-repository-template.yaml
       Parameters:
         ProjectName: !Ref ProjectName
         CreatedBy: !Ref CreatedBy
@@ -77,7 +112,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: VPCStack
     Properties:
-      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/templates/vpc-endpoint-template.yaml
+      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/2.0.3/templates/vpc-endpoint-template.yaml
       Parameters:
         VPCId: !GetAtt VPCStack.Outputs.VpcId
         PrivateRouteTableId: !GetAtt VPCStack.Outputs.PrivateRouteTableId
@@ -91,7 +126,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: [VPCStack]
     Properties:
-      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/templates/dynamodb-template.yaml
+      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/2.0.3/templates/dynamodb-template.yaml
       Parameters:
         ProjectName: !Ref ProjectName
         TableSuffix: !Ref TableSuffix
@@ -102,7 +137,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: [VPCStack]
     Properties:
-      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/templates/opensearch-template.yaml
+      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/2.0.3/templates/opensearch-template.yaml
       Parameters:
         VpcId: !GetAtt VPCStack.Outputs.VpcId
         PrivateSubnetId: !GetAtt VPCStack.Outputs.PrivateSubnet1
@@ -118,7 +153,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: [VPCStack, DynamoDBStack, OpenSearchStack, ECRRepositoryStack]
     Properties:
-      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/templates/lambda-template.yaml
+      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/2.0.3/templates/lambda-template.yaml
       Parameters:
         TableSuffix: !Ref TableSuffix
         VpcId: !GetAtt VPCStack.Outputs.VpcId
@@ -139,18 +174,18 @@ Resources:
         CostComputeRepositoryUri: !GetAtt ECRRepositoryStack.Outputs.CostComputeRepositoryURI
         PublicSubnet1: !GetAtt VPCStack.Outputs.PublicSubnet1
         PrivateSubnet1: !GetAtt VPCStack.Outputs.PrivateSubnet1
-        IndexingImageTag: "2.0.1"
-        RetrieverImageTag: "2.0.1"
-        AppImageTag: "2.0.1.1"
-        EvaluationImageTag: "2.0.1"
-        RuntimeImageTag: "2.0.1"
-        CostComputeImageTag: "2.0.1"
+        IndexingImageTag: "2.0.3"
+        RetrieverImageTag: "2.0.3"
+        AppImageTag: "2.0.3"
+        EvaluationImageTag: "2.0.3"
+        RuntimeImageTag: "2.0.3"
+        CostComputeImageTag: "2.0.3"
 
   ECSStack:
     Type: AWS::CloudFormation::Stack
     DependsOn: [VPCStack, DynamoDBStack, OpenSearchStack, ECRRepositoryStack]
     Properties:
-      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/templates/ecs-template.yaml
+      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/2.0.3/templates/ecs-template.yaml
       Parameters:
         TableSuffix: !Ref TableSuffix
         VpcId: !GetAtt VPCStack.Outputs.VpcId
@@ -171,7 +206,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: [VPCStack, ECSStack, LambdaStack, DynamoDBStack, OpenSearchStack]
     Properties:
-      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/templates/state-machine-template.yaml
+      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/2.0.3/templates/state-machine-template.yaml
       Parameters:
         TableSuffix: !Ref TableSuffix
         VpcId: !GetAtt VPCStack.Outputs.VpcId
@@ -197,7 +232,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: [ECRRepositoryStack, DynamoDBStack, OpenSearchStack, StateMachineStack]
     Properties:
-      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/templates/app-runner-template.yaml
+      TemplateURL: !Sub https://flotorch-public.s3.us-east-1.amazonaws.com/2.0.3/templates/app-runner-template.yaml
       Parameters:
         TableSuffix: !Ref TableSuffix
         Region: !Ref AWS::Region
@@ -212,7 +247,7 @@ Resources:
         VpcConnectorArn: !GetAtt VPCStack.Outputs.VpcConnectorArn
         BedrockRoleArn: !GetAtt VPCStack.Outputs.BedrockRoleArn
         EcrRepositoryUri: !GetAtt ECRRepositoryStack.Outputs.AppRepositoryURI
-        AppImageTag: "2.0.1.1"
+        AppImageTag: "2.0.3"
 
 Outputs:
   AppRunnerServiceUrl:

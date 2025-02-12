@@ -36,7 +36,7 @@ const columns = ref<TableColumn<ProjectExperiment>[]>([
       return h(UButton, {
         color: "neutral",
         variant: "ghost",
-        label: "Embedding Model",
+        label: "Status",
         icon: isSorted
           ? isSorted === "asc"
             ? "i-lucide-arrow-up-narrow-wide"
@@ -46,12 +46,9 @@ const columns = ref<TableColumn<ProjectExperiment>[]>([
         onClick: () => column.toggleSorting(column.getIsSorted() === "asc"),
       });
     },
-    label: "Embedding Model",
-    accessorKey: "config.embedding_model",
+    label: "Status",
+    accessorKey: "experiment_status",
     enableHiding: true,
-    cell: ({ row }) => {
-      return getModelName("indexing", row.original.config.embedding_model) || 'NA'
-    }
   },
   {
     header: ({ column }) => {
@@ -82,7 +79,7 @@ const columns = ref<TableColumn<ProjectExperiment>[]>([
       return h(UButton, {
         color: "neutral",
         variant: "ghost",
-        label: "Indexing Algorithm",
+        label: "Estimated Cost",
         icon: isSorted
           ? isSorted === "asc"
             ? "i-lucide-arrow-up-narrow-wide"
@@ -92,79 +89,16 @@ const columns = ref<TableColumn<ProjectExperiment>[]>([
         onClick: () => column.toggleSorting(column.getIsSorted() === "asc"),
       });
     },
-    label: "Indexing Algorithm",
-    accessorKey: "config.indexing_algorithm",
-    enableHiding: true,
-    cell: ({ row }) => {
-      return useHumanIndexingAlgorithm(row.original.config.indexing_algorithm) || 'NA'
-    }
-  },
-  {
-    header: ({ column }) => {
-      const isSorted = column.getIsSorted();
-      return h(UButton, {
-        color: "neutral",
-        variant: "ghost",
-        label: "Chunking",
-        icon: isSorted
-          ? isSorted === "asc"
-            ? "i-lucide-arrow-up-narrow-wide"
-            : "i-lucide-arrow-down-wide-narrow"
-          : "i-lucide-arrow-up-down",
-        class: "-mx-2.5",
-        onClick: () => column.toggleSorting(column.getIsSorted() === "asc"),
-      });
-    },
-    accessorKey: "config.chunking_strategy",
-    enableHiding: true,
-    cell: ({ row }) => {
-      return useHumanChunkingStrategy(row.original.config.chunking_strategy) || 'NA'
-    },
-    label: "Chunking"
-  },
-  {
-    header: ({ column }) => {
-      const isSorted = column.getIsSorted();
-      return h(UButton, {
-        color: "neutral",
-        variant: "ghost",
-        label: "Status",
-        icon: isSorted
-          ? isSorted === "asc"
-            ? "i-lucide-arrow-up-narrow-wide"
-            : "i-lucide-arrow-down-wide-narrow"
-          : "i-lucide-arrow-up-down",
-        class: "-mx-2.5",
-        onClick: () => column.toggleSorting(column.getIsSorted() === "asc"),
-      });
-    },
-    label: "Status",
-    accessorKey: "experiment_status",
-    enableHiding: true,
-  },
-  {
-    header: ({ column }) => {
-      const isSorted = column.getIsSorted();
-      return h(UButton, {
-        color: "neutral",
-        variant: "ghost",
-        label: "Inferencing Model Temperature",
-        icon: isSorted
-          ? isSorted === "asc"
-            ? "i-lucide-arrow-up-narrow-wide"
-            : "i-lucide-arrow-down-wide-narrow"
-          : "i-lucide-arrow-up-down",
-        class: "-mx-2.5",
-        onClick: () => column.toggleSorting(column.getIsSorted() === "asc"),
-      });
-    },
-    label: "Inferencing Model Temperature",
-    accessorKey: "config.temp_retrieval_llm",
+    label: 'Estimated Cost',
+    accessorKey: "experiment_cost",
     enableHiding: true,
     sortingFn: (rowA, rowB) => {
-      const a = rowA.original.config?.temp_retrieval_llm ?? 0;
-      const b = rowB.original.config?.temp_retrieval_llm ?? 0;
+      const a = rowA.original.cost ?? 0;
+      const b = rowB.original.cost ?? 0;
       return Number(a) - Number(b);
+    },
+    cell: ({ row }) => {
+      return useHumanCurrencyAmount(useConvertStringToNumber(row.original.cost))
     }
   },
   {
@@ -202,6 +136,10 @@ const columns = ref<TableColumn<ProjectExperiment>[]>([
       return Number(a) - Number(b);
     },
     cell: ({ row }) => {
+      if(!row.original.config.knowledge_base){
+        return "NA"
+
+      }
       if ("faithfulness_score" in row.original.eval_metrics) {
         return row.original.eval_metrics.faithfulness_score ? parseFloat(row.original.eval_metrics.faithfulness_score.toString()).toFixed(2) : "-"
       }
@@ -244,6 +182,10 @@ const columns = ref<TableColumn<ProjectExperiment>[]>([
       return 0;
     },
     cell: ({ row }) => {
+       if(!row.original.config.knowledge_base){
+        return "NA"
+
+      }
       if ("context_precision_score" in row.original.eval_metrics) {
         return row.original.eval_metrics.context_precision_score ? parseFloat(row.original.eval_metrics.context_precision_score.toString()).toFixed(2) : "-"
       }
@@ -259,7 +201,7 @@ const columns = ref<TableColumn<ProjectExperiment>[]>([
       return h(UButton, {
         color: "neutral",
         variant: "ghost",
-        label: "Aspect Critic",
+        label: "Maliciousness",
         icon: isSorted
           ? isSorted === "asc"
             ? "i-lucide-arrow-up-narrow-wide"
@@ -269,7 +211,7 @@ const columns = ref<TableColumn<ProjectExperiment>[]>([
         onClick: () => column.toggleSorting(column.getIsSorted() === "asc"),
       });
     },
-    label: 'Aspect Critic',
+    label: 'Maliciousness',
     accessorKey: "eval_metrics.aspect_critic_score",
     enableHiding: true,
     sortingFn: (rowA, rowB) => {
@@ -335,6 +277,80 @@ const columns = ref<TableColumn<ProjectExperiment>[]>([
         return row.original.eval_metrics.M?.answers_relevancy_score ? parseFloat(row.original.eval_metrics.M.answers_relevancy_score.toString()).toFixed(2) : "-"
       }
       return "-"
+    }
+  },
+  {
+    header: ({ column }) => {
+      const isSorted = column.getIsSorted();
+      return h(UButton, {
+        color: "neutral",
+        variant: "ghost",
+        label: "Duration",
+        icon: isSorted
+          ? isSorted === "asc"
+            ? "i-lucide-arrow-up-narrow-wide"
+            : "i-lucide-arrow-down-wide-narrow"
+          : "i-lucide-arrow-up-down",
+        class: "-mx-2.5",
+        onClick: () => column.toggleSorting(column.getIsSorted() === "asc"),
+      });
+    },
+    label: 'Duration',
+    accessorKey: "experiment_duration",
+    enableHiding: true,
+    sortingFn: (rowA, rowB) => {
+      const a = rowA.original.total_time ?? 0;
+      const b = rowB.original.total_time ?? 0;
+      return Number(a) - Number(b);
+    },
+    cell: ({ row }) => {
+      return row.original.total_time && (row.original.experiment_status === 'succeeded' || row.original.experiment_status === 'failed') ? useHumanDuration(row.original.total_time) : "-"
+    }
+  },
+  {
+    header: ({ column }) => {
+      const isSorted = column.getIsSorted();
+      return h(UButton, {
+        color: "neutral",
+        variant: "ghost",
+        label: "N Shot Prompts",
+        icon: isSorted
+          ? isSorted === "asc"
+            ? "i-lucide-arrow-up-narrow-wide"
+            : "i-lucide-arrow-down-wide-narrow"
+          : "i-lucide-arrow-up-down",
+        class: "-mx-2.5",
+        onClick: () => column.toggleSorting(column.getIsSorted() === "asc"),
+      });
+    },
+    label: "N Shot Prompts",
+    accessorKey: "config.n_shot_prompts",
+    enableHiding: true,
+    cell: ({ row }) => {
+      return row.original.config?.n_shot_prompts !== undefined || row.original.config?.n_shot_prompts !== null ? row.original.config.n_shot_prompts : "-"
+    }
+  },
+  {
+    header: ({ column }) => {
+      const isSorted = column.getIsSorted();
+      return h(UButton, {
+        color: "neutral",
+        variant: "ghost",
+        label: "Embedding Model",
+        icon: isSorted
+          ? isSorted === "asc"
+            ? "i-lucide-arrow-up-narrow-wide"
+            : "i-lucide-arrow-down-wide-narrow"
+          : "i-lucide-arrow-up-down",
+        class: "-mx-2.5",
+        onClick: () => column.toggleSorting(column.getIsSorted() === "asc"),
+      });
+    },
+    label: "Embedding Model",
+    accessorKey: "config.embedding_model",
+    enableHiding: true,
+    cell: ({ row }) => {
+      return getModelName("indexing", row.original.config.embedding_model) || 'NA'
     }
   },
   {
@@ -455,7 +471,7 @@ const columns = ref<TableColumn<ProjectExperiment>[]>([
       return h(UButton, {
         color: "neutral",
         variant: "ghost",
-        label: "Duration",
+        label: "Indexing Algorithm",
         icon: isSorted
           ? isSorted === "asc"
             ? "i-lucide-arrow-up-narrow-wide"
@@ -465,16 +481,11 @@ const columns = ref<TableColumn<ProjectExperiment>[]>([
         onClick: () => column.toggleSorting(column.getIsSorted() === "asc"),
       });
     },
-    label: 'Duration',
-    accessorKey: "experiment_duration",
+    label: "Indexing Algorithm",
+    accessorKey: "config.indexing_algorithm",
     enableHiding: true,
-    sortingFn: (rowA, rowB) => {
-      const a = rowA.original.total_time ?? 0;
-      const b = rowB.original.total_time ?? 0;
-      return Number(a) - Number(b);
-    },
     cell: ({ row }) => {
-      return row.original.total_time && (row.original.experiment_status === 'succeeded' || row.original.experiment_status === 'failed') ? useHumanDuration(row.original.total_time) : "-"
+      return useHumanIndexingAlgorithm(row.original.config.indexing_algorithm) || 'NA'
     }
   },
   {
@@ -483,7 +494,7 @@ const columns = ref<TableColumn<ProjectExperiment>[]>([
       return h(UButton, {
         color: "neutral",
         variant: "ghost",
-        label: "Estimated Cost",
+        label: "Chunking",
         icon: isSorted
           ? isSorted === "asc"
             ? "i-lucide-arrow-up-narrow-wide"
@@ -493,16 +504,36 @@ const columns = ref<TableColumn<ProjectExperiment>[]>([
         onClick: () => column.toggleSorting(column.getIsSorted() === "asc"),
       });
     },
-    label: 'Estimated Cost',
-    accessorKey: "experiment_cost",
+    accessorKey: "config.chunking_strategy",
+    enableHiding: true,
+    cell: ({ row }) => {
+      return useHumanChunkingStrategy(row.original.config.chunking_strategy) || 'NA'
+    },
+    label: "Chunking"
+  },
+  {
+    header: ({ column }) => {
+      const isSorted = column.getIsSorted();
+      return h(UButton, {
+        color: "neutral",
+        variant: "ghost",
+        label: "Inferencing Model Temperature",
+        icon: isSorted
+          ? isSorted === "asc"
+            ? "i-lucide-arrow-up-narrow-wide"
+            : "i-lucide-arrow-down-wide-narrow"
+          : "i-lucide-arrow-up-down",
+        class: "-mx-2.5",
+        onClick: () => column.toggleSorting(column.getIsSorted() === "asc"),
+      });
+    },
+    label: "Inferencing Model Temperature",
+    accessorKey: "config.temp_retrieval_llm",
     enableHiding: true,
     sortingFn: (rowA, rowB) => {
-      const a = rowA.original.cost ?? 0;
-      const b = rowB.original.cost ?? 0;
+      const a = rowA.original.config?.temp_retrieval_llm ?? 0;
+      const b = rowB.original.config?.temp_retrieval_llm ?? 0;
       return Number(a) - Number(b);
-    },
-    cell: ({ row }) => {
-      return useHumanCurrencyAmount(useConvertStringToNumber(row.original.cost))
     }
   },
   {
@@ -586,7 +617,7 @@ const columns = ref<TableColumn<ProjectExperiment>[]>([
       return a.localeCompare(b);
     },
     cell: ({ row }) => {
-      return row.original.config?.kb_name ? row.original.config.kb_name : "-"
+      return row.original.config?.kb_name ? row.original.config.kb_name : "NA"
     }
   },
 ])
@@ -606,7 +637,7 @@ const hasAllExperimentsCompleted = computed(() => {
 })
 
 const columnVisibility = ref({
-  // directional_pricing: false,
+  directional_pricing: false,
   config_kb_name: false,
   config_guardrail_name: false,
   config_eval_service: false,
@@ -615,6 +646,9 @@ const columnVisibility = ref({
   config_rerank_model_id: false,
   config_temp_retrieval_llm: false,
   config_indexing_algorithm: false,
+  config_chunking_strategy: false,
+  config_embedding_model: false,
+  config_n_shot_prompts: false,
 })
 </script>
 
@@ -681,6 +715,10 @@ const columnVisibility = ref({
                             <tr>
                               <td>Retrieval Cost Estimate:</td>
                               <td>{{useHumanCurrencyAmount(row.original?.config?.retrieval_cost_estimate,3)}}</td>
+                            </tr>
+                            <tr>
+                              <td>Inferencing Cost Estimate:</td>
+                              <td>{{useHumanCurrencyAmount(row.original?.config?.inferencing_cost_estimate,3)}}</td>
                             </tr>
                             <tr>
                               <td>Evaluation Cost Estimate:</td>

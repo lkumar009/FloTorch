@@ -64,11 +64,16 @@ const columns = ref<TableColumn<ExperimentQuestionMetric>[]>([
   },
 ]);
 
+const indexing_order = ref(['model', 'service', 'knowledge_base_tokens', 'bedrock_cost', 'runtime', 'ecs_cost', 'opensearch_cost', 'total_cost'])
+
 const overall_metadata = computed(() => {
   return experimentsData.value.overall_metadata;
 })
 
 const indexing_metadata = computed(() => {
+    // return {...experimentsData.value.indexing_metadata,
+    //   order: ['model', 'service', 'knowledge_base_tokens', 'bedrock_cost', 'runtime', 'ecs_cost', 'opensearch_cost', 'total_cost']
+    // }
   return experimentsData.value.indexing_metadata;
 })
 
@@ -113,7 +118,7 @@ const items = ref([
         <UCard>
           <template #header>
             <div class="flex justify-between items-center">
-              <h2 class="text-xl font-medium">Experiment Question Metrics</h2>
+              <h2 class="text-xl font-medium">Experiment Question Metrics ({{ questionMetrics?.question_metrics?.length }})</h2>
               <DownloadResultsButton
                 :results="questionMetrics?.question_metrics"
                 button-label="Download Results"
@@ -188,11 +193,49 @@ const items = ref([
                   <td colspan="2">
                     <table class="w-full">
                       <tbody>
-                        <tr v-for="(value, key) in overall_metadata" :key="key">
-                          <td class="font-medium w-40">{{ key.split('_').join(' ').replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase()))) }}</td>
-                          <td v-if="key.includes('time')" class="w-40">{{ useConvertSecondsToDHM(Number(value)) }}</td>
-                          <td v-else-if="key.includes('cost')" class="w-40">{{ useHumanCurrencyAmount(Number(value)) }}</td>
-                          <td v-else class="w-40">{{ value }}</td> 
+                        <tr v-for="key in overall_metadata.order" :key="key">
+                          <template v-if="overall_metadata[key] !== undefined">
+                            <td class="font-medium w-40 break-all">{{ key === 'ecs_cost' ? 'ECS Cost' : key.split('_').join(' ').replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase()))) }}</td>
+                            <td v-if="key.includes('time')" class="w-40 break-all">{{ useConvertSecondsToDHM(Number(overall_metadata[key])) }}</td>
+                            <td v-else-if="key.includes('cost')" class="w-40 break-all">{{ useHumanCurrencyAmount(Number(overall_metadata[key])) }}</td>
+                            <td v-else class="w-40 break-all">{{ overall_metadata[key] }}</td>
+                          </template>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+                <tr v-else>
+                  <td colspan="2">
+                    <div class="flex flex-col items-center justify-center py-6">
+                      <p>No valid metrics are found...!</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </UCard>
+          <UCard class="my-5">
+            <template #header>
+              <h4 class="text-lg font-medium">Indexing</h4>
+            </template>
+            <table class="w-full">
+              <tbody>
+                <tr v-if="indexing_metadata && !experimentsData?.config?.bedrock_knowledge_base">
+                  <td colspan="2">
+                    <table class="w-full">
+                      <tbody>
+                        <tr v-for="key in indexing_metadata.order" :key="key">
+                          <template v-if="indexing_metadata[key] !== undefined">
+                            <td class="font-medium w-40 break-all">{{ 
+                              key === 'ecs_cost' 
+                                ? 'ECS Cost' 
+                                : key.split('_').join(' ').replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase())))
+                            }}</td>
+                            <td v-if="key.includes('time') || key.includes('latency')" class="w-40 break-all">{{ useConvertSecondsToDHM(Number(indexing_metadata[key])) }}</td>
+                            <td v-else-if="key.includes('cost')" class="w-40 break-all">{{ useHumanCurrencyAmount(Number(indexing_metadata[key])) }}</td>
+                            <td v-else class="w-40 break-all">{{ indexing_metadata[key] }}</td>
+                          </template>
                         </tr>
                       </tbody>
                     </table>
@@ -219,6 +262,25 @@ const items = ref([
                         </tr>
                       </tbody>
                     </table>
+                <tr v-else-if="experimentsData?.config?.bedrock_knowledge_base">
+                  <td colspan="2">
+                    <div class="flex flex-col items-center justify-center py-6">
+                      <p>Bedrock Knowledge Bases Pricing is currently not supported</p>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-else-if="experimentsData?.config?.knowledge_base">
+                  <td colspan="2">
+                    <div class="flex flex-col items-center justify-center py-6">
+                      <p>No indexing cost incurred</p>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-else>
+                  <td colspan="2">
+                    <div class="flex flex-col items-center justify-center py-6">
+                      <p>No valid metrics are found...!</p>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -227,7 +289,7 @@ const items = ref([
 
           <UCard class="my-5">
             <template #header>
-              <h4 class="text-lg font-medium">Retrieval</h4>
+              <h4 class="text-lg font-medium">Evaluation</h4>
             </template>
             <table class="w-full text-left">
               <tbody>
@@ -235,14 +297,39 @@ const items = ref([
                   <td colspan="2">
                     <table class="w-full">
                       <tbody>
-                        <tr v-for="(value, key) in retriever_metadata" :key="key">
-                          <td class="font-medium w-40">{{ key.split('_').join(' ').replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase()))) }}</td>
-                          <td v-if="key.includes('time')" class="w-40">{{ useConvertSecondsToDHM(Number(value)) }}</td>
-                          <td v-else-if="key.includes('cost')" class="w-40">{{ useHumanCurrencyAmount(Number(value)) }}</td>
-                          <td v-else class="w-40">{{ value }}</td> 
+                        <tr v-for="key in retriever_metadata.order" :key="key">
+                          <template v-if="retriever_metadata[key] !== undefined">
+                            <td class="font-medium w-40 break-all">{{ key === 'ecs_cost' ? 'ECS Cost' : key.split('_').join(' ').replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase()))) }}</td>
+                          <td v-if="key.includes('time') || key.includes('latency')" class="w-40 break-all">{{ useConvertSecondsToDHM(Number(retriever_metadata[key])) }}</td>
+                          <td v-else-if="key.includes('cost')" class="w-40 break-all">{{ useHumanCurrencyAmount(Number(retriever_metadata[key])) }}</td>
+                          <td v-else class="w-40 break-all">{{ retriever_metadata[key] }}</td>
+                          </template>
                         </tr>
                       </tbody>
                     </table>
+                  </td>
+                </tr>
+                <tr v-else>
+                  <td colspan="2">
+                    <div class="flex flex-col items-center justify-center py-6">
+                      <p>No valid metrics are found...!</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </UCard>
+
+          <UCard class="my-5">
+            <template #header>
+              <h4 class="text-lg font-medium">Inferencing</h4>
+            </template>
+            <table class="w-full text-left">
+              <tbody>
+                <tr>
+                  <td class="font-medium w-40">Indexing Embedded Tokens</td>
+                  <td class="w-40">
+                    {{ experimentsData?.index_embed_tokens || 'NA' }}
                   </td>
                 </tr>
               </tbody>
@@ -259,62 +346,23 @@ const items = ref([
                   <td colspan="2">
                     <table class="w-full">
                       <tbody>
-                        <tr v-for="(value, key) in evaluation_metadata" :key="key">
-                          <td class="font-medium w-40">{{ key.split('_').join(' ').replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase()))) }}</td>
-                          <td v-if="key.includes('time')" class="w-40">{{ useConvertSecondsToDHM(Number(value)) }}</td>
-                          <td v-else-if="key.includes('cost')" class="w-40">{{ useHumanCurrencyAmount(Number(value)) }}</td>
-                          <td v-else class="w-40">{{ value }}</td> 
+                        <tr v-for="key in evaluation_metadata.order" :key="key">
+                          <template v-if="evaluation_metadata[key] !== undefined">
+                            <td class="font-medium w-40 break-all">{{ key === 'ecs_cost' ? 'ECS Cost' : key.split('_').join(' ').replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase()))) }}</td>
+                            <td v-if="key.includes('time') || key.includes('latency')" class="w-40 break-all">{{ useConvertSecondsToDHM(Number(evaluation_metadata[key])) }}</td>
+                          <td v-else-if="key.includes('cost')" class="w-40 break-all">{{ useHumanCurrencyAmount(Number(evaluation_metadata[key])) }}</td>
+                            <td v-else class="w-40 break-all">{{ evaluation_metadata[key] }}</td> 
+                          </template>
                         </tr>
                       </tbody>
                     </table>
                   </td>
                 </tr>
-              </tbody>
-            </table>
-          </UCard>
-
-          <UCard class="my-5">
-            <template #header>
-              <h4 class="text-lg font-medium">Inferencer</h4>
-            </template>
-            <table class="w-full text-left">
-              <tbody>
-                <tr v-if="inferencer_metadata">
+                <tr v-else>
                   <td colspan="2">
-                    <table class="w-full">
-                      <tbody>
-                        <tr v-for="(value, key) in inferencer_metadata" :key="key">
-                          <td class="font-medium w-40">{{ key.split('_').join(' ').replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase()))) }}</td>
-                          <td v-if="key.includes('time')" class="w-40">{{ useConvertSecondsToDHM(Number(value)) }}</td>
-                          <td v-else-if="key.includes('cost')" class="w-40">{{ useHumanCurrencyAmount(Number(value)) }}</td>
-                          <td v-else class="w-40">{{ value }}</td> 
-                        </tr>
-                      </tbody>
-                    </table>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </UCard>
-
-          <UCard class="my-5">
-            <template #header>
-              <h4 class="text-lg font-medium">Evaluation</h4>
-            </template>
-            <table class="w-full text-left">
-              <tbody>
-                <tr v-if="evaluation_metadata">
-                  <td colspan="2">
-                    <table class="w-full">
-                      <tbody>
-                        <tr v-for="(value, key) in evaluation_metadata" :key="key">
-                          <td class="font-medium w-40">{{ key.split('_').join(' ').replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase()))) }}</td>
-                          <td v-if="key.includes('time')" class="w-40">{{ useConvertSecondsToDHM(Number(value)) }}</td>
-                          <td v-else-if="key.includes('cost')" class="w-40">{{ useHumanCurrencyAmount(Number(value)) }}</td>
-                          <td v-else class="w-40">{{ value }}</td> 
-                        </tr>
-                      </tbody>
-                    </table>
+                    <div class="flex flex-col items-center justify-center py-6">
+                      <p>No valid metrics are found...!</p>
+                    </div>
                   </td>
                 </tr>
               </tbody>

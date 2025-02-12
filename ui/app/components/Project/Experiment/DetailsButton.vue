@@ -29,19 +29,19 @@ const props = defineProps<{
           </tr>
           <tr>
             <td class="font-medium">Chunking</td>
-            <td>{{ props.experimentsData?.config?.bedrock_knowledge_base ? 'NA' :  props.experimentsData?.config?.chunking_strategy }}</td>
+            <td>{{ (props.experimentsData?.config?.bedrock_knowledge_base || !props.experimentsData?.config?.knowledge_base) ? 'NA' :  props.experimentsData?.config?.chunking_strategy }}</td>
           </tr>
           <tr>
             <td class="font-medium">Vector Dimensions</td>
-            <td>{{ props.experimentsData?.config?.bedrock_knowledge_base ? 'NA' : props.experimentsData?.config?.vector_dimension }}</td>
+            <td>{{ (props.experimentsData?.config?.bedrock_knowledge_base || !props.experimentsData?.config?.knowledge_base) ? 'NA' : props.experimentsData?.config?.vector_dimension }}</td>
           </tr>
           <tr>
             <td class="font-medium">Chunk Size</td>
-            <td>{{ props.experimentsData?.config?.bedrock_knowledge_base ? 'NA' : useHumanChunkingStrategy(props.experimentsData?.config?.chunking_strategy) === 'Fixed' ? props.experimentsData?.config?.chunk_size : [props.experimentsData?.config?.hierarchical_child_chunk_size, props.experimentsData?.config?.hierarchical_parent_chunk_size]}}</td>
+            <td>{{ (props.experimentsData?.config?.bedrock_knowledge_base || !props.experimentsData?.config?.knowledge_base) ? 'NA' : useHumanChunkingStrategy(props.experimentsData?.config?.chunking_strategy) === 'Fixed' ? props.experimentsData?.config?.chunk_size : [props.experimentsData?.config?.hierarchical_child_chunk_size, props.experimentsData?.config?.hierarchical_parent_chunk_size]}}</td>
           </tr>
           <tr>
             <td class="font-medium">Chunk Overlap Percentage</td>
-            <td>{{props.experimentsData?.config?.bedrock_knowledge_base ? 'NA' : useHumanChunkingStrategy(props.experimentsData?.config?.chunking_strategy) === 'Fixed' ? props.experimentsData?.config?.chunk_overlap : props.experimentsData?.config?.hierarchical_chunk_overlap_percentage}}</td>
+            <td>{{(props.experimentsData?.config?.bedrock_knowledge_base || !props.experimentsData?.config?.knowledge_base) ? 'NA' : useHumanChunkingStrategy(props.experimentsData?.config?.chunking_strategy) === 'Fixed' ? props.experimentsData?.config?.chunk_overlap : props.experimentsData?.config?.hierarchical_chunk_overlap_percentage}}</td>
           </tr>
           <tr>
             <td class="font-medium">N Shot Prompts</td>
@@ -57,13 +57,14 @@ const props = defineProps<{
           </tr>
           <tr>
             <td class="font-medium">Indexing Algorithm</td>
-            <td>{{props.experimentsData?.config?.bedrock_knowledge_base ? 'NA' : useHumanIndexingAlgorithm(props.experimentsData?.config?.indexing_algorithm!) }}</td>
+            <td>{{(props.experimentsData?.config?.bedrock_knowledge_base || !props.experimentsData?.config?.knowledge_base) ? 'NA' : useHumanIndexingAlgorithm(props.experimentsData?.config?.indexing_algorithm!) }}</td>
           </tr>
           <tr>
             <td class="font-medium">Embedding Model</td>
             <td>{{ useModelName("indexing", props.experimentsData?.config?.embedding_model!) }} {{
-              props.experimentsData?.config?.bedrock_knowledge_base ? 'NA' :
-              (useHumanModelService(props.experimentsData?.config?.embedding_service!)) }}
+              (props.experimentsData?.config?.bedrock_knowledge_base || !props.experimentsData?.config?.knowledge_base) ? 'NA' :
+              `(${useHumanModelService(props.experimentsData?.config?.embedding_service!)})`
+            }}
             </td>
           </tr>
           <tr>
@@ -85,15 +86,9 @@ const props = defineProps<{
             </td>
           </tr>
            <tr v-if="props.experimentsData?.config?.kb_data">
-            <td class="font-medium">Bedrock Kb data</td>
+            <td class="font-medium">Knowledge Base Data</td>
             <td>{{
-              props.experimentsData?.config?.kb_data }}
-            </td>
-          </tr>
-          <tr v-if="props.experimentsData?.config?.kb_name">
-            <td class="font-medium">Bedrock Kb Name</td>
-            <td>{{
-              props.experimentsData?.config?.kb_name }}
+             props.experimentsData?.config?.bedrock_knowledge_base === true ? props.experimentsData?.config?.kb_name : props.experimentsData?.config?.kb_data }}
             </td>
           </tr>
           <tr v-if="props.experimentsData?.config?.guardrail_id">
