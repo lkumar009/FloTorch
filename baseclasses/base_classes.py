@@ -409,7 +409,7 @@ class EvaluationMetrics():
         """Convert metrics from DynamoDB format to EvaluationMetrics"""
         return EvaluationMetrics(
             faithfulness_score=float(metrics_dict.get('faithfulness', '0.0')),
-            context_precision_score=float(metrics_dict.get('llm_context_precision_without_reference', '0.0')),
+            context_precision_score=float(metrics_dict.get('llm_context_precision_with_reference', '0.0')),
             aspect_critic_score=float(metrics_dict.get('maliciousness', '0.0')),
             answers_relevancy_score=float(metrics_dict.get('answer_relevancy', '0.0')),
             string_similarity=float(metrics_dict.get('String_Similarity', '0.0')),
