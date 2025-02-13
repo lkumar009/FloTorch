@@ -41,7 +41,7 @@ class ExperimentalConfig(BaseModel):
     eval_service: str = 'ragas'
     eval_embedding_model: str = 'amazon.titan-embed-text-v1'
     eval_retrieval_model: str = 'mistral.mixtral-8x7b-instruct-v0:1'
-    eval_retrieval_temperature: float = float(0.4)
+    eval_retrieval_temperature: float = float(0.1) #float(0.4)
     # Rerank model id
     rerank_model_id: str = Field(alias="rerank_model_id", default="none")
     bedrock_knowledge_base: bool = False
