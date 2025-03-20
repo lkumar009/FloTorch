@@ -169,7 +169,7 @@ const formatMetadataKey = (key: string) => {
                         <div class="" v-for="(value, key) in experiment.metadata">
                           <strong>{{ formatMetadataKey(key) }}: </strong> 
                           <span v-if="formatMetadataKey(key).toLowerCase() === 'total token price'">
-                            ${{ value }}
+                            {{ useHumanCurrencyAmount(value,5) }}
                           </span>
                           <span v-else-if="formatMetadataKey(key).toLowerCase() === 'million question price'">
                             {{ useHumanCurrencyAmount(value) }}
